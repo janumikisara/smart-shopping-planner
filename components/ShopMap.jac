@@ -34,7 +34,7 @@ def:pub ShopMap(locations: list[dict], selected_lat: float = 6.773, selected_lon
 
     return <div className="flex flex-col gap-2">
         <MapContainer center={[6.773, 79.882]} zoom={13} scrollWheelZoom={True} className="h-[320px] w-full rounded-xl border sm:h-[420px]">
-            <TileLayer attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors, &copy; <a href='https://carto.com/attributions'>CARTO</a>" url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" />
+            <TileLayer attribution="Tiles &copy; Esri" url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}" />
             <MapPicker onPick={choose_map_point} />
             {for (index, place) in enumerate(locations) {
                 lat_value: float = place["latitude"] as float;
