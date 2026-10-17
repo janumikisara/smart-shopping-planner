@@ -1,4 +1,4 @@
-sv import from ..services.shoppingService { ShopItem, ShoppingRequest, PlanLine, ShoppingPlan, getShopInventory }
+sv import from ..services.shoppingService { ShopItem, PlanLine, ShoppingPlan, getShopInventory }
 sv import from ..services.userPlanningService { SavedShoppingPlan, PlanResult, getShoppingList, saveShoppingList, getPlanningPreferences, savePlanningPreferences, getSavedPlans, createSavedShoppingPlan }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent }
 import from .ui.button { Button }
@@ -9,6 +9,7 @@ def:pub ShoppingPlanner() -> JsxElement {
     has inventory: list[ShopItem] = [],
         selected_items: list[dict] = [],
         saved_plans: list[SavedShoppingPlan] = [],
+        alternatives: list[dict] = [],
         plan: ShoppingPlan | None = None,
         item_name: str = "",
         item_category: str = "Other",
@@ -30,7 +31,7 @@ def:pub ShoppingPlanner() -> JsxElement {
         saved_items = await getShoppingList();
         loaded_items: list[dict] = [];
         for saved_item in saved_items {
-            loaded_items.append({"name": saved_item.name, "category": saved_item.category, "brand": saved_item.brand, "details": saved_item.details, "quantity": saved_item.quantity});
+            loaded_items.append({"name": str(saved_item["name"]), "category": str(saved_item["category"]), "brand": str(saved_item["brand"]), "details": str(saved_item["details"]), "quantity": int(saved_item["quantity"])});
         }
         selected_items = loaded_items;
         preferences = await getPlanningPreferences();
@@ -51,9 +52,9 @@ def:pub ShoppingPlanner() -> JsxElement {
     def handle_trip_window(e: ChangeEvent) { trip_window = e.target.value; }
 
     async def persist_list -> None {
-        payload: list[ShoppingRequest] = [];
+        payload: list[dict] = [];
         for value in selected_items {
-            payload.append(ShoppingRequest(name=str(value["name"]), category=str(value["category"]), brand=str(value["brand"]), details=str(value["details"]), quantity=int(value["quantity"])));
+            payload.append({"name": str(value["name"]), "category": str(value["category"]), "brand": str(value["brand"]), "details": str(value["details"]), "quantity": int(value["quantity"])});
         }
         response = await saveShoppingList(payload);
         if not response["ok"] { status_message = "List could not be saved to this account."; }
@@ -73,6 +74,7 @@ def:pub ShoppingPlanner() -> JsxElement {
         if duplicate { form_error = "That exact item is already on your list. Change its details to add a separate item."; return; }
         selected_items = selected_items + [{"name": clean_name, "category": item_category, "brand": item_brand.strip(), "details": item_details.strip(), "quantity": quantity_value}];
         plan = None;
+        alternatives = [];
         item_name = "";
         item_brand = "";
         item_details = "";
@@ -85,6 +87,7 @@ def:pub ShoppingPlanner() -> JsxElement {
     def remove_item(item: dict) {
         selected_items = [value for value in selected_items if not (value["name"] == item["name"] and value["category"] == item["category"] and value["brand"] == item["brand"] and value["details"] == item["details"])];
         plan = None;
+        alternatives = [];
         status_message = "List saved to your account.";
         persist_list();
     }
@@ -97,12 +100,13 @@ def:pub ShoppingPlanner() -> JsxElement {
     }
 
     async def make_plan {
-        request_payload: list[ShoppingRequest] = [];
+        request_payload: list[dict] = [];
         for value in selected_items {
-            request_payload.append(ShoppingRequest(name=str(value["name"]), category=str(value["category"]), brand=str(value["brand"]), details=str(value["details"]), quantity=int(value["quantity"])));
+            request_payload.append({"name": str(value["name"]), "category": str(value["category"]), "brand": str(value["brand"]), "details": str(value["details"]), "quantity": int(value["quantity"])});
         }
         result: PlanResult = await createSavedShoppingPlan(request_payload, priority, planning_area);
         plan = result.plan;
+        alternatives = result.alternatives;
         saved_plans = await getSavedPlans();
         status_message = "Plan saved to your account history.";
         persist_list();
