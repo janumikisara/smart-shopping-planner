@@ -1,4 +1,4 @@
-sv import from ..services.shoppingService { ShopItem, PlanLine, ShoppingPlan, getShopInventory, generateShoppingPlan }
+sv import from ..services.shoppingService { ShopItem, ShoppingRequest, PlanLine, ShoppingPlan, getShopInventory, generateShoppingPlan }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent }
 import from .ui.button { Button }
 import from .ui.input { Input }
@@ -75,7 +75,8 @@ def:pub ShoppingPlanner() -> JsxElement {
     }
 
     async def make_plan {
-        plan = await generateShoppingPlan(selected_items, priority);
+        request_payload = selected_items as list[ShoppingRequest];
+        plan = await generateShoppingPlan(request_payload, priority);
     }
 
     return <div className="min-h-svh bg-muted/40">

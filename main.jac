@@ -1,4 +1,5 @@
-import from authService { AuthResult, createUserProfile, registerAccount, getAuthenticatedRole, authorizeDashboard }
+import from authService { createUserProfile, registerAccount, getAuthenticatedRole, authorizeDashboard }
+import from services.shoppingService { ShoppingRequest, getShopInventory, generateShoppingPlan }
 import from .components.ShoppingPlanner { ShoppingPlanner }
 import from .components.RoleLogin { RoleLogin }
 import from .components.RoleRegistration { RoleRegistration }
