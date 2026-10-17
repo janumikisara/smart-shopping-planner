@@ -12,15 +12,16 @@ api_key = "${OPENAI_API_KEY:-}"
 
 
 [jac-shadcn]
-style = "vega"
-baseColor = "stone"
-theme = "amber"
-font = "figtree"
-radius = "medium"
+style = "lyra"
+baseColor = "zinc"
+theme = "teal"
+font = "geist"
+radius = "small"
 menuAccent = "subtle"
 menuColor = "default"
 [dependencies]
 [dependencies.npm]
+"@fontsource-variable/geist" = "*"
 "@fontsource-variable/figtree" = "*"
 react = "^18.2.0"
 react-dom = "^18.2.0"
