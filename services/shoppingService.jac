@@ -1,3 +1,5 @@
+import from services.shopService { ShopProfile, InventoryEntry, listShopInventory, getPublicShopProfile }
+
 obj ShopItem {
     has id: str;
     has name: str;
@@ -35,16 +37,20 @@ obj ShoppingPlan {
 }
 
 def:pub getShopInventory() -> list[ShopItem] {
-    return [
-        ShopItem(id="laptop", name="Everyday laptop · 16GB / 512GB", category="Electronics", shop="Moratuwa Tech Hub", area="Katubedda", price=189900, stock="In stock · 2", updated="Updated 25 min ago"),
-        ShopItem(id="laptop", name="Everyday laptop · 16GB / 512GB", category="Electronics", shop="Coastal Computers", area="Moratuwa town", price=194500, stock="In stock · 4", updated="Updated 1 hr ago"),
-        ShopItem(id="mouse", name="Wireless mouse · silent click", category="Electronics", shop="Moratuwa Tech Hub", area="Katubedda", price=4250, stock="Low stock · 2", updated="Updated 25 min ago"),
-        ShopItem(id="mouse", name="Wireless mouse · silent click", category="Electronics", shop="Coastal Computers", area="Moratuwa town", price=3900, stock="In stock · 8", updated="Updated 1 hr ago"),
-        ShopItem(id="charger", name="USB-C phone charger · 25W", category="Electronics", shop="Moratuwa Tech Hub", area="Katubedda", price=3200, stock="In stock · 6", updated="Updated 25 min ago"),
-        ShopItem(id="charger", name="USB-C phone charger · 25W", category="Electronics", shop="Coastal Computers", area="Moratuwa town", price=2950, stock="Out of stock", updated="Updated 1 hr ago"),
-        ShopItem(id="groceries", name="Weekly grocery essentials", category="Groceries", shop="People's Market", area="Rawathawatta", price=5850, stock="In stock · 12", updated="Updated 40 min ago"),
-        ShopItem(id="groceries", name="Weekly grocery essentials", category="Groceries", shop="Townside Supermarket", area="Moratuwa town", price=6120, stock="Availability unconfirmed", updated="Updated yesterday")
-    ];
+    records = listShopInventory();
+    listings: list[ShopItem] = [];
+    for record in records {
+        if record.stock_status != "Out of stock" {
+            product_name = record.product_name;
+            if record.brand.strip() { product_name = product_name + " · " + record.brand.strip(); }
+            if record.model.strip() { product_name = product_name + " " + record.model.strip(); }
+            shop_area = "Address not provided";
+            profile = getPublicShopProfile(record.account_id);
+            if profile is not None { shop_area = profile.address; }
+            listings.append(ShopItem(id=jid(record), name=product_name, category=record.category, shop=record.shop_name, area=shop_area, price=record.price_lkr, stock=record.stock_status + " · Qty " + str(record.quantity), updated=record.updated_at));
+        }
+    }
+    return listings;
 }
 
 def:pub generateShoppingPlan(items: list[ShoppingRequest], priority: str) -> ShoppingPlan {
@@ -59,13 +65,10 @@ def:pub generateShoppingPlan(items: list[ShoppingRequest], priority: str) -> Sho
         best: ShopItem | None = None;
         for product in inventory {
             if product.name.lower() == request_name.lower() and product.category == request_category and product.stock.startswith("In stock") {
-                if best is None {
-                    best = product;
-                } else {
+                if best is None { best = product; }
+                else {
                     selected_best = best as ShopItem;
-                    if product.price < selected_best.price {
-                        best = product;
-                    }
+                    if product.price < selected_best.price { best = product; }
                 }
             }
         }
@@ -80,14 +83,11 @@ def:pub generateShoppingPlan(items: list[ShoppingRequest], priority: str) -> Sho
             }
             lines.append(PlanLine(item=request_name, shop=selected.shop, area=selected.area, price=line_total, quantity=request.quantity, details=line_details, stock=selected.stock));
             total += line_total;
-            if selected.shop not in seen_shops {
-                seen_shops.append(selected.shop);
-            }
+            if selected.shop not in seen_shops { seen_shops.append(selected.shop); }
         }
     }
-    explanation = "Only exact product-name and category matches with confirmed in-stock demo records are included. Custom brand/specification details are shown but are not verified by demo inventory. Road route times are not available.";
-    if priority == "time" {
-        explanation = "Exact in-stock matches are grouped by shop. Custom brand/specification details are not verified by demo inventory, and road routing is not connected.";
-    }
+    explanation = "Plans use current shop-managed listings. Price, stock, quantity, and update time are provided by the shop. Travel routing estimates are unavailable.";
+    if len(inventory) == 0 { explanation = "No shop-managed inventory is currently published. Ask a Moratuwa shop to add product listings before generating a matched plan."; }
+    elif priority == "time" { explanation = "Exact in-stock listings are grouped by shop. Shop details and custom specifications are shown, but road travel routing is not connected."; }
     return ShoppingPlan(lines=lines, total=total, stops=len(seen_shops), explanation=explanation);
 }
