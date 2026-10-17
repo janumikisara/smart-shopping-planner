@@ -47,15 +47,21 @@ def:pub getShopInventory() -> list[ShopItem] {
     ];
 }
 
-def:pub generateShoppingPlan(items: list[ShoppingRequest], priority: str) -> ShoppingPlan {
+def:pub generateShoppingPlan(items: list[dict], priority: str) -> ShoppingPlan {
     inventory = getShopInventory();
     lines: list[PlanLine] = [];
     total = 0;
     seen_shops: list[str] = [];
     for request in items {
+        request_name = str(request["name"]);
+        request_category = str(request["category"]);
+        request_brand = str(request["brand"]);
+        request_details = str(request["details"]);
+        request_quantity = int(request["quantity"]);
+        if request_quantity < 1 or request_quantity > 99 { continue; }
         best: ShopItem | None = None;
         for product in inventory {
-            if product.name.lower() == request.name.lower() and product.category == request.category and product.stock.startswith("In stock") {
+            if product.name.lower() == request_name.lower() and product.category == request_category and product.stock.startswith("In stock") {
                 if best is None {
                     best = product;
                 } else {
@@ -68,14 +74,14 @@ def:pub generateShoppingPlan(items: list[ShoppingRequest], priority: str) -> Sho
         }
         if best is not None {
             selected = best as ShopItem;
-            line_total = selected.price * request.quantity;
+            line_total = selected.price * request_quantity;
             line_details = "";
-            if request.brand.strip() { line_details = "Brand: " + request.brand.strip(); }
-            if request.details.strip() {
+            if request_brand.strip() { line_details = "Brand: " + request_brand.strip(); }
+            if request_details.strip() {
                 if line_details { line_details = line_details + " · "; }
-                line_details = line_details + request.details.strip();
+                line_details = line_details + request_details.strip();
             }
-            lines.append(PlanLine(item=request.name, shop=selected.shop, area=selected.area, price=line_total, quantity=request.quantity, details=line_details, stock=selected.stock));
+            lines.append(PlanLine(item=request_name, shop=selected.shop, area=selected.area, price=line_total, quantity=request_quantity, details=line_details, stock=selected.stock));
             total += line_total;
             if selected.shop not in seen_shops {
                 seen_shops.append(selected.shop);

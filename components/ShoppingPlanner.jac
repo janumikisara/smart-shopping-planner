@@ -1,4 +1,4 @@
-sv import from ..services.shoppingService { ShopItem, ShoppingRequest, PlanLine, ShoppingPlan, getShopInventory, generateShoppingPlan }
+sv import from ..services.shoppingService { ShopItem, PlanLine, ShoppingPlan, getShopInventory, generateShoppingPlan }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent }
 import from .ui.button { Button }
 import from .ui.input { Input }
@@ -6,11 +6,11 @@ import from .ui.badge { Badge }
 
 def:pub ShoppingPlanner() -> JsxElement {
     has inventory: list[ShopItem] = [],
-        selected_items: list[ShoppingRequest] = [
-            ShoppingRequest(name="Everyday laptop · 16GB / 512GB", category="Electronics", brand="", details="", quantity=1),
-            ShoppingRequest(name="Wireless mouse · silent click", category="Electronics", brand="", details="", quantity=1),
-            ShoppingRequest(name="USB-C phone charger · 25W", category="Electronics", brand="", details="", quantity=1),
-            ShoppingRequest(name="Weekly grocery essentials", category="Groceries", brand="", details="", quantity=1)
+        selected_items: list[dict] = [
+            {"name": "Everyday laptop · 16GB / 512GB", "category": "Electronics", "brand": "", "details": "", "quantity": 1},
+            {"name": "Wireless mouse · silent click", "category": "Electronics", "brand": "", "details": "", "quantity": 1},
+            {"name": "USB-C phone charger · 25W", "category": "Electronics", "brand": "", "details": "", "quantity": 1},
+            {"name": "Weekly grocery essentials", "category": "Groceries", "brand": "", "details": "", "quantity": 1}
         ],
         plan: ShoppingPlan | None = None,
         item_name: str = "",
@@ -52,7 +52,7 @@ def:pub ShoppingPlanner() -> JsxElement {
         }
         duplicate = False;
         for existing in selected_items {
-            if existing.name == clean_name and existing.category == item_category and existing.brand == item_brand.strip() and existing.details == item_details.strip() {
+            if existing["name"] == clean_name and existing["category"] == item_category and existing["brand"] == item_brand.strip() and existing["details"] == item_details.strip() {
                 duplicate = True;
             }
         }
@@ -60,7 +60,7 @@ def:pub ShoppingPlanner() -> JsxElement {
             form_error = "That exact item is already on your list. Change its details to add a separate item.";
             return;
         }
-        selected_items = selected_items + [ShoppingRequest(name=clean_name, category=item_category, brand=item_brand.strip(), details=item_details.strip(), quantity=quantity_value)];
+        selected_items = selected_items + [{"name": clean_name, "category": item_category, "brand": item_brand.strip(), "details": item_details.strip(), "quantity": quantity_value}];
         plan = None;
         item_name = "";
         item_brand = "";
@@ -69,8 +69,8 @@ def:pub ShoppingPlanner() -> JsxElement {
         form_error = "";
     }
 
-    def remove_item(item: ShoppingRequest) {
-        selected_items = [value for value in selected_items if not (value.name == item.name and value.category == item.category and value.brand == item.brand and value.details == item.details)];
+    def remove_item(item: dict) {
+        selected_items = [value for value in selected_items if not (value["name"] == item["name"] and value["category"] == item["category"] and value["brand"] == item["brand"] and value["details"] == item["details"])];
         plan = None;
     }
 
@@ -103,7 +103,7 @@ def:pub ShoppingPlanner() -> JsxElement {
                             {if len(selected_items) == 0 {<div className="rounded-lg border border-dashed bg-background p-5"><p className="font-medium">Your list is empty</p><p className="mt-1 text-sm text-muted-foreground">Add a product above to start planning.</p></div>}}
                             {for (index, item) in enumerate(selected_items) {
                                 <div key={str(index)} className="flex items-start justify-between gap-3 rounded-lg border bg-background px-3 py-3">
-                                    <div className="min-w-0"><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{item.category} · Qty {str(item.quantity)}</p>{item.brand and <p className="text-xs text-muted-foreground">Brand: {item.brand}</p>}{item.details and <p className="text-xs text-muted-foreground">{item.details}</p>}</div>
+                                    <div className="min-w-0"><p className="font-medium">{item["name"]}</p><p className="text-xs text-muted-foreground">{item["category"]} · Qty {str(item["quantity"])}</p>{item["brand"] and <p className="text-xs text-muted-foreground">Brand: {item["brand"]}</p>}{item["details"] and <p className="text-xs text-muted-foreground">{item["details"]}</p>}</div>
                                     <button type="button" onClick={lambda { remove_item(item); }} className="shrink-0 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted">Remove</button>
                                 </div>
                             }}
