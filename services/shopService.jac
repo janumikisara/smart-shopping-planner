@@ -129,6 +129,31 @@ def:pub getPublicShopProfile(account_id: str) -> ShopProfile | None {
     return None;
 }
 
+def:protect saveShopLocation(latitude: float, longitude: float) -> dict {
+    if not _shop_role_ok() { return {"ok": False, "message": "Shop role required."}; }
+    if latitude < -90.0 or latitude > 90.0 or longitude < -180.0 or longitude > 180.0 { return {"ok": False, "message": "Enter valid latitude and longitude coordinates."}; }
+    profiles = [root -->][?:ShopProfile];
+    if len(profiles) == 0 { return {"ok": False, "message": "Save your shop profile before setting its location."}; }
+    profiles[0].latitude = latitude;
+    profiles[0].longitude = longitude;
+    profiles[0].updated_at = "Updated just now";
+    return {"ok": True, "message": "Shop location saved."};
+}
+
+def:pub getSavedShopLocations() -> list[ShopProfile] {
+    locations: list[ShopProfile] = [];
+    for account_root in allroots() {
+        for account in [account_root -->][?:AccountProfile] {
+            if account.role == "shop" and account.account_id == jid(account_root) {
+                for profile in [account_root -->][?:ShopProfile] {
+                    if profile.latitude != 0.0 and profile.longitude != 0.0 { locations.append(profile); }
+                }
+            }
+        }
+    }
+    return locations;
+}
+
 def:pub listShopInventory() -> list[InventoryEntry] {
     entries: list[InventoryEntry] = [];
     for account_root in allroots() {
