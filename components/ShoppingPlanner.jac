@@ -1,5 +1,5 @@
 sv import from ..services.shoppingService { ShopItem, PlanLine, ShoppingPlan, getShopInventory }
-sv import from ..services.userPlanningService { SavedShoppingPlan, PlanResult, getShoppingList, saveShoppingList, getPlanningPreferences, savePlanningPreferences, getSavedPlans, createSavedShoppingPlan }
+sv import from ..services.userPlanningService { SavedShoppingPlan, PlanOption, PlanResult, getShoppingList, saveShoppingList, getPlanningPreferences, savePlanningPreferences, getSavedPlans, createSavedShoppingPlan }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent }
 import from .ui.button { Button }
 import from .ui.input { Input }
@@ -10,6 +10,7 @@ def:pub ShoppingPlanner() -> JsxElement {
         selected_items: list[dict] = [],
         saved_plans: list[SavedShoppingPlan] = [],
         alternatives: list[dict] = [],
+        plan_options: list[PlanOption] = [],
         plan: ShoppingPlan | None = None,
         item_name: str = "",
         item_category: str = "Other",
@@ -74,6 +75,7 @@ def:pub ShoppingPlanner() -> JsxElement {
         if duplicate { form_error = "That exact item is already on your list. Change its details to add a separate item."; return; }
         selected_items = selected_items + [{"name": clean_name, "category": item_category, "brand": item_brand.strip(), "details": item_details.strip(), "quantity": quantity_value}];
         plan = None;
+        plan_options = [];
         alternatives = [];
         item_name = "";
         item_brand = "";
@@ -87,6 +89,7 @@ def:pub ShoppingPlanner() -> JsxElement {
     def remove_item(item: dict) {
         selected_items = [value for value in selected_items if not (value["name"] == item["name"] and value["category"] == item["category"] and value["brand"] == item["brand"] and value["details"] == item["details"])];
         plan = None;
+        plan_options = [];
         alternatives = [];
         status_message = "List saved to your account.";
         persist_list();
@@ -99,6 +102,17 @@ def:pub ShoppingPlanner() -> JsxElement {
         status_message = str(response["message"]);
     }
 
+    async def select_plan(option_name: str) {
+        request_payload: list[dict] = [];
+        for value in selected_items { request_payload.append({"name": str(value["name"]), "category": str(value["category"]), "brand": str(value["brand"]), "details": str(value["details"]), "quantity": int(value["quantity"])}); }
+        result = await createSavedShoppingPlan(request_payload, priority, planning_area, option_name);
+        plan = result.plan;
+        plan_options = result.options;
+        alternatives = result.alternatives;
+        saved_plans = await getSavedPlans();
+        status_message = "Selected plan recalculated and saved.";
+    }
+
     async def make_plan {
         request_payload: list[dict] = [];
         for value in selected_items {
@@ -106,6 +120,7 @@ def:pub ShoppingPlanner() -> JsxElement {
         }
         result: PlanResult = await createSavedShoppingPlan(request_payload, priority, planning_area);
         plan = result.plan;
+        plan_options = result.options;
         alternatives = result.alternatives;
         saved_plans = await getSavedPlans();
         status_message = "Plan saved to your account history.";
@@ -132,13 +147,7 @@ def:pub ShoppingPlanner() -> JsxElement {
                     <Button onClick={make_plan} disabled={len(selected_items) == 0 or saving} className="h-11 w-full shadow-sm">Generate shopping plan</Button>
                 </CardContent></Card>
                 <div className="flex flex-col gap-5">
-                    {if plan is not None {chosen = plan as ShoppingPlan;<Card className="border-primary/30 shadow-sm"><CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>Recommended plan</CardTitle><CardDescription>Based on exact product and category matches in current shop listings</CardDescription></div><Badge variant="secondary">Saved plan</Badge></div></CardHeader><CardContent className="flex flex-col gap-4">
-                        {if len(chosen.lines) == 0 {<div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No requested items currently match confirmed shop inventory. Your list is preserved, and no alternatives are fabricated.</div>}}
-                        {for (index, line) in enumerate(chosen.lines) {<div key={str(index)} className="flex flex-col gap-2 border-b pb-4 last:border-0"><div className="flex items-center justify-between gap-3"><div><p className="font-medium">{line.item}</p><p className="text-sm text-muted-foreground">Recommended: {line.shop} · {line.area}</p><p className="text-xs text-muted-foreground">Qty {str(line.quantity)} · {line.stock}</p>{line.details and <p className="text-xs text-muted-foreground">{line.details}</p>}</div><p className="shrink-0 font-semibold tabular-nums">LKR {str(line.price)}</p></div>
-                            {for (alternative_index, alternative) in enumerate(inventory) {if alternative.category == line.item and alternative.shop != line.shop {<div key={str(alternative_index)} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2"><div><p className="text-sm">Alternative: {alternative.shop}</p><p className="text-xs text-muted-foreground">{alternative.stock} · LKR {str(alternative.price)}</p></div></div>}}}
-                        </div>}}
-                        <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg bg-muted/60 p-4"><div><p className="text-xs text-muted-foreground">Estimated items total</p><p className="text-2xl font-semibold tabular-nums">LKR {str(chosen.total)}</p></div><p className="text-sm text-muted-foreground">{str(chosen.stops)} shop visits</p></div><p className="text-sm leading-relaxed text-muted-foreground">{chosen.explanation}</p>
-                    </CardContent></Card>} else {<Card className="shadow-sm"><CardHeader><CardTitle>Ready to plan</CardTitle><CardDescription>Generate a price-based plan from your current list.</CardDescription></CardHeader><CardContent><p className="rounded-xl border border-dashed bg-background p-6 text-sm text-muted-foreground">Your current list is saved to your signed-in account. Generate a plan to compare available shop listings.</p></CardContent></Card>}}
+                    {if plan is not None {chosen = plan as ShoppingPlan;<div className="flex flex-col gap-4"><div className="grid gap-4 xl:grid-cols-3">{for (option_index, option) in enumerate(plan_options) {<Card key={str(option_index)} className="border-primary/20 shadow-sm"><CardHeader><CardTitle>{option.name}</CardTitle><CardDescription>{option.focus}</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><div className="flex items-end justify-between rounded-lg bg-muted/60 p-3"><div><p className="text-xs text-muted-foreground">Product total</p><p className="text-xl font-semibold tabular-nums">LKR {str(option.total)}</p></div><p className="text-sm">{str(option.stops)} stops</p></div>{for (line_index, line) in enumerate(option.lines) {<div key={str(line_index)} className="border-b pb-3 last:border-0"><p className="font-medium">{line.item}</p><p className="text-sm text-muted-foreground">{line.shop} · {line.area}</p><p className="text-xs text-muted-foreground">Qty {str(line.quantity)} · {line.stock}</p><p className="text-sm font-medium">LKR {str(line.price)}</p></div>}}{if len(option.lines) == 0 {<p className="text-sm text-muted-foreground">No matching confirmed in-stock items for this plan.</p>}}<p className="text-xs text-muted-foreground">Travel time and road distance: {option.travel_estimate}</p><Button variant="outline" onClick={lambda { select_plan(option.name); }}>Choose and save this plan</Button></CardContent></Card>}}</div><Card className="border-primary/30 shadow-sm"><CardHeader><CardTitle>Selected plan</CardTitle><CardDescription>Current saved recommendation · {str(chosen.stops)} shop visits</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><p className="text-2xl font-semibold tabular-nums">LKR {str(chosen.total)} product total</p><p className="text-sm text-muted-foreground">{chosen.explanation}</p></CardContent></Card></div>} else {<Card className="shadow-sm"><CardHeader><CardTitle>Ready to plan</CardTitle><CardDescription>Compare convenience, price, and backup options from current in-stock shop listings.</CardDescription></CardHeader><CardContent><p className="rounded-xl border border-dashed bg-background p-6 text-sm text-muted-foreground">Your list is saved to your signed-in account. Generate three plans to compare current offers.</p></CardContent></Card>}}
                     <Card className="shadow-sm"><CardHeader><CardTitle>Shop inventory comparison</CardTitle><CardDescription>Current listings from registered shops in {planning_area}.</CardDescription></CardHeader><CardContent className="flex flex-col gap-3">
                         {if len(inventory) == 0 {<div className="rounded-lg border border-dashed p-6"><p className="font-medium">No shop listings available</p><p className="mt-1 text-sm text-muted-foreground">No shops have published inventory yet. Listings appear here when shops add products.</p></div>}}
                         {for (index, product) in enumerate(inventory) {<div key={str(index)} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-3"><div><p className="font-medium">{product.name}</p><p className="text-sm text-muted-foreground">{product.shop} · {product.area}</p><p className="text-xs text-muted-foreground">{product.category} · {product.stock} · {product.updated}</p></div><span className="font-semibold tabular-nums">LKR {str(product.price)}</span></div>}}
