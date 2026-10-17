@@ -1,5 +1,5 @@
 import from "@jac/runtime" { jacSignup, jacLogin, useNavigate, useLocation }
-sv import from ..authService { AuthResult, registerAccount }
+sv import from ..authService { createUserProfile, registerAccount }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import from .ui.button { Button }
 import from .ui.input { Input }
@@ -64,13 +64,24 @@ def:pub RoleRegistration() -> JsxElement {
             busy = False;
             return;
         }
-        account_result: AuthResult = await registerAccount(account_type, name.strip(), shop_name.strip());
-        if not account_result.ok {
-            error_message = account_result.message;
-            busy = False;
-            return;
+        if account_type == "user" {
+            account_result: AuthResult = await createUserProfile();
+            if not account_result["ok"] {
+                error_message = account_result["message"] as str;
+                busy = False;
+                return;
+            }
+            nav(account_result["destination"] as str, {"replace": True});
+        } else {
+            display_name: str = name.strip();
+            account_result: AuthResult = await registerAccount(account_type, display_name, shop_name);
+            if not account_result["ok"] {
+                error_message = account_result["message"] as str;
+                busy = False;
+                return;
+            }
+            nav(account_result["destination"] as str, {"replace": True});
         }
-        nav(account_result.destination, {"replace": True});
     }
 
     return <div className="grid min-h-svh bg-muted/40 lg:grid-cols-2">

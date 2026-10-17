@@ -1,4 +1,5 @@
 node AccountProfile {
+    has account_id: str = "";
     has role: str = "user";
     has display_name: str = "";
     has shop_name: str = "";

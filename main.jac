@@ -1,3 +1,4 @@
+import from authService { AuthResult, createUserProfile, registerAccount, getAuthenticatedRole, authorizeDashboard }
 import from .components.ShoppingPlanner { ShoppingPlanner }
 import from .components.RoleLogin { RoleLogin }
 import from .components.RoleRegistration { RoleRegistration }
