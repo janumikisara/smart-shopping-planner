@@ -1,6 +1,7 @@
 import from authService { createUserProfile, registerAccount, getAuthenticatedRole, authorizeDashboard }
 import from services.shopService { ShopProfile, InventoryEntry, getShopProfile, saveShopProfile, listOwnInventory, addInventoryEntry, updateInventoryEntry, deleteInventoryEntry, getPublicShopProfile, listShopInventory }
 import from services.shoppingService { ShoppingRequest, ShopItem, PlanLine, ShoppingPlan, getShopInventory, generateShoppingPlan }
+import from services.userPlanningService { SavedListItem, PlanningPreference, SavedShoppingPlan, PlanResult, getShoppingList, saveShoppingList, getPlanningPreferences, savePlanningPreferences, getSavedPlans, createSavedShoppingPlan }
 import from .components.ShoppingPlanner { ShoppingPlanner }
 import from .components.RoleLogin { RoleLogin }
 import from .components.RoleRegistration { RoleRegistration }
